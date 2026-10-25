@@ -1,0 +1,778 @@
+
+<div class="min-h-screen bg-gray-50 p-3 sm:p-5 lg:p-8">
+<%= form_with url: bills_path, method: :post, id: "bill_form" do %>
+  <%= hidden_field_tag "bill[items_json]", "[]", id: "bill_items_json" %>
+  <%= hidden_field_tag "bill[discount_amount]", "0", id: "bill_discount_amount" %>
+  <%= hidden_field_tag "bill[payment_mode]", "full", id: "bill_payment_mode" %>
+  <%= hidden_field_tag "bill[paid_amount]", "0", id: "bill_paid_amount" %>
+  <%= hidden_field_tag "bill[old_udhaar_payment]", "0", id: "bill_old_udhaar_payment" %>
+  <%= hidden_field_tag "bill[payment_method]", "cash", id: "bill_payment_method" %>
+  <%= hidden_field_tag "bill[submission_action]", "draft", id: "bill_submission_action" %>
+
+  <div class="mx-auto">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Create New Bill</h1>
+        <p class="mt-1 text-sm text-gray-500">Select a customer, add products and collect payment.</p>
+      </div>
+      <span class="w-fit rounded-full bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-800">
+        New Bill
+      </span>
+    </div>
+
+    <!-- Customer Details -->
+    <div class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+      <h2 class="mb-4 text-base font-bold text-gray-900">Customer Details</h2>
+
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
+        <div class="relative">
+          <label for="customer_search" class="mb-2 block text-sm font-medium text-gray-700">
+            Search Customer
+          </label>
+
+          <input id="customer_search" type="text" autocomplete="off"
+                 placeholder="Name or mobile number..."
+                 class="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+
+          <input type="hidden" id="bill_customer_id" name="bill[customer_id]">
+
+          <div id="customer_results"
+               class="absolute z-20 mt-1 hidden max-h-64 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+            <% @customers.each do |customer| %>
+              <button type="button"
+                      class="customer-result flex w-full items-center justify-between gap-3 border-b border-gray-100 px-4 py-3 text-left hover:bg-blue-50"
+                      data-id="<%= customer.id %>"
+                      data-name="<%= customer.name %>"
+                      data-phone="<%= customer.respond_to?(:phone) ? customer.phone : '' %>"
+                      data-old-balance="<%= @customer_balances.fetch(customer.id, 0) %>">
+                <span class="min-w-0">
+                  <span class="customer-result-name block truncate text-sm font-semibold text-gray-900">
+                    <%= customer.name %>
+                  </span>
+                  <span class="customer-result-phone mt-1 block text-xs text-gray-500">
+                    <%= customer.respond_to?(:phone) ? customer.phone : '' %>
+                  </span>
+                </span>
+                <span class="shrink-0 text-xs font-semibold text-blue-600">Select</span>
+              </button>
+            <% end %>
+
+            <p id="customer_no_results" class="hidden p-4 text-sm text-gray-500">
+              No customer found.
+            </p>
+          </div>
+
+          <div class="mt-2 flex items-center justify-between rounded-lg bg-green-50 px-3 py-2.5">
+            <div class="min-w-0">
+              <p class="text-xs text-green-700">Selected Customer</p>
+              <p id="selected_customer_name" class="truncate text-sm font-semibold text-green-900">
+                Walk-in Customer
+              </p>
+            </div>
+            <button type="button" id="change_customer"
+                    class="shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-800">
+              Clear
+            </button>
+          </div>
+        </div>
+      <!-- Walk-in Customer Details -->
+      <div id="walk_in_details" class="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <h3 class="mb-3 text-sm font-semibold text-blue-900">
+          Walk-in Customer Details (Optional)
+        </h3>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label for="walk_in_name" class="mb-1 block text-sm font-medium text-gray-700">
+              Customer Name
+            </label>
+            <input
+              type="text"
+              id="walk_in_name"
+              name="bill[walk_in_name]"
+              placeholder="Customer ka naam"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none">
+          </div>
+        </div>
+      </div>
+
+        <!-- <div>
+          <label class="mb-2 block text-sm font-medium text-gray-700">Bill Number</label>
+          <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+            Generated automatically on save
+          </div>
+        </div> -->
+
+        <div>
+          <label class="mb-2 block text-sm font-medium text-gray-700">Bill Date</label>
+          <input type="date" value="<%= Date.current %>" readonly
+                 class="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Search -->
+    <div class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+      <div class="mb-4">
+        <h2 class="text-base font-bold text-gray-900">Choose Products</h2>
+        <p class="mt-1 text-sm text-gray-500">
+          Search by product name or SKU. Click a tile to add it to the bill.
+        </p>
+      </div>
+
+      <div class="sticky top-0 z-10 mb-5 bg-white py-2">
+        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path stroke-linecap="round" d="m16 16 4 4"></path>
+          </svg>
+        </span>
+        <input id="product_search" type="text" autocomplete="off"
+               placeholder="Type product name or SKU..."
+               class="w-full rounded-lg border border-gray-300 py-3 pl-11 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+      </div>
+
+      <div id="product_tiles"
+           class="grid max-h-[450px] grid-cols-1 gap-3 overflow-y-auto overscroll-contain pr-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <% @products.each do |product| %>
+          <button type="button"
+                  class="product-tile group cursor-pointer rounded-xl border border-gray-200 bg-white p-4 text-left transition hover:border-blue-500 hover:bg-blue-50 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  data-id="<%= product.id %>"
+                  data-name="<%= product.name %>"
+                  data-sku="<%= product.respond_to?(:sku) ? product.sku : '' %>"
+                  data-price="<%= product.selling_price || 0 %>"
+                  data-unit="<%= product.respond_to?(:unit) && product.unit.present? ? product.unit : 'pcs' %>"
+                  data-stock="<%= product.respond_to?(:stock_quantity) ? product.stock_quantity : '' %>">
+            <div class="mb-3 flex items-start justify-between gap-2">
+              <span class="line-clamp-2 font-semibold text-gray-900"><%= product.name.to_s.titleize %></span>
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-lg font-bold text-blue-700 group-hover:bg-blue-600 group-hover:text-white">+</span>
+            </div>
+
+            <p class="text-xs text-gray-500">
+              SKU:
+              <span class="font-medium text-gray-700">
+                <%= product.respond_to?(:sku) && product.sku.present? ? product.sku : "—" %>
+              </span>
+            </p>
+
+            <div class="mt-4 flex items-end justify-between gap-2 border-t border-gray-100 pt-3">
+              <div>
+                <p class="text-xs text-gray-500">Rate</p>
+                <p class="mt-1 text-lg font-bold text-blue-700">
+                  <%= number_to_currency(product.selling_price || 0, unit: "₹", precision: 2, delimiter: ",") %>
+                </p>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-gray-500">Unit</p>
+                <p class="mt-1 text-sm font-semibold text-gray-800">
+                  <%= product.respond_to?(:unit) && product.unit.present? ? product.unit : "" %>
+                </p>
+              </div>
+            </div>
+          </button>
+        <% end %>
+      </div>
+
+      <div id="no_products_found" class="hidden rounded-lg bg-gray-50 px-4 py-12 text-center">
+        <p class="font-medium text-gray-700">No matching products</p>
+        <p class="mt-1 text-sm text-gray-500">Try another product name or SKU.</p>
+      </div>
+
+      <% if @products.empty? %>
+        <p class="mt-4 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+          No products found. Add products first, then create a bill.
+        </p>
+      <% end %>
+    </div>
+
+    <!-- Bill Items -->
+    <div class="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-gray-200 p-5">
+        <div>
+          <h2 class="text-base font-bold text-gray-900">Bill Items</h2>
+          <p class="mt-1 text-sm text-gray-500">Adjust quantity or rate if required.</p>
+        </div>
+        <span id="item_count" class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+          0 items
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Product</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Rate (₹)</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Quantity</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Amount (₹)</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Remove</th>
+            </tr>
+          </thead>
+
+          <tbody id="bill_items_body" class="divide-y divide-gray-100">
+            <tr id="empty_items">
+              <td colspan="5" class="px-4 py-12 text-center">
+                <p class="font-medium text-gray-700">No items added yet</p>
+                <p class="mt-1 text-sm text-gray-500">Click any product tile above to add it here.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Manual Item -->
+      <div class="border-t border-gray-200 bg-gray-50 p-4 sm:p-5">
+        <button type="button" id="toggle_manual"
+                class="text-sm font-semibold text-blue-600 hover:text-blue-800 cursor-pointer">
+          + Add manual item / packing / delivery charge
+        </button>
+
+        <div id="manual_item_form" class="mt-4 hidden grid-cols-1 gap-3 sm:grid-cols-4">
+          <div class="sm:col-span-2">
+            <label for="manual_name" class="mb-1 block text-xs font-medium text-gray-600">Item description</label>
+            <input id="manual_name" type="text" placeholder="e.g. Packing charge"
+                   class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500">
+          </div>
+          <div>
+            <label for="manual_price" class="mb-1 block text-xs font-medium text-gray-600">Rate (₹)</label>
+            <input id="manual_price" type="number" min="0" step="0.01" placeholder="0.00"
+                   class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500">
+          </div>
+          <div>
+            <label for="manual_qty" class="mb-1 block text-xs font-medium text-gray-600">Quantity</label>
+            <input id="manual_qty" type="number" min="0.001" step="0.001" value="1"
+                   class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500">
+          </div>
+          <div class="sm:col-span-4">
+            <button type="button" id="add_manual_btn"
+                    class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 cursor-pointer">
+              Add Manual Item
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment and Summary -->
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+      <div class="space-y-5 lg:col-span-3">
+        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 class="mb-4 text-base font-bold text-gray-900">Payment Details</h2>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label for="discount_amount" class="mb-2 block text-sm font-medium text-gray-700">Discount (₹)</label>
+              <input id="discount_amount" type="number" min="0" step="0.01" value="0"
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-blue-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label for="payment_mode" class="mb-2 block text-sm font-medium text-gray-700">Payment Type</label>
+              <select id="payment_mode"
+                      class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5">
+                <option value="full" selected>Full Payment</option>
+                <option value="partial">Partial Payment</option>
+                <option value="credit">Udhaar / Credit</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="payment_method" class="mb-2 block text-sm font-medium text-gray-700">Payment Method</label>
+              <select id="payment_method"
+                      class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5">
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="card">Card</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div id="paid_amount_wrap" class="sm:col-span-2">
+              <label for="paid_amount" class="mb-2 block text-sm font-medium text-gray-700">Amount Received (₹)</label>
+              <input id="paid_amount" type="number" min="0" step="0.01" value="0"
+                     class="w-full rounded-lg border border-gray-300 px-3 py-2.5 focus:border-blue-500 focus:outline-none">
+              <p id="payment_help" class="mt-1 text-sm text-gray-500">
+                Purane udhaar aur naye bill ka total payable amount.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="lg:col-span-2">
+        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+          <h2 class="mb-5 text-base font-bold text-gray-900">Bill Summary</h2>
+
+          <div class="space-y-4 text-sm">
+            <div class="flex items-center justify-between gap-4 text-gray-600">
+              <span>Subtotal</span>
+              <span id="subtotal_display" class="font-medium text-gray-900">₹0.00</span>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-gray-600">
+              <span>Discount</span>
+              <span id="discount_display" class="font-medium text-gray-900">− ₹0.00</span>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 rounded-lg bg-amber-50 p-3">
+              <span class="font-semibold text-amber-800">Purana Udhaar</span>
+              <span id="old_balance_display" class="font-bold text-amber-800">₹0.00</span>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-gray-600">
+              <span>Naye Bill ka Total</span>
+              <span id="bill_total_display" class="font-semibold text-gray-900">₹0.00</span>
+            </div>
+
+            <div class="border-t border-dashed border-gray-200 pt-4">
+              <div class="flex items-center justify-between gap-4">
+                <span class="font-bold text-gray-900">Grand Total (Purana + Naya)</span>
+                <span id="grand_total_display" class="text-xl font-bold text-gray-900">₹0.00</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 text-gray-600">
+              <span>Paid Amount</span>
+              <span id="paid_display" class="font-medium text-green-700">₹0.00</span>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 rounded-lg bg-red-50 p-3">
+              <span class="font-semibold text-red-700">Balance / Udhaar</span>
+              <span id="due_display" class="font-bold text-red-700">₹0.00</span>
+            </div>
+
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-gray-600">Payment Status</span>
+              <span id="payment_status_display" class="font-semibold text-red-600">Unpaid</span>
+            </div>
+          </div>
+
+          <div class="mt-6 space-y-3">
+            <button type="button" id="save_draft_btn"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer">
+              Save Draft
+            </button>
+            <button type="button" id="complete_bill_btn"
+                    class="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer">
+              Complete Bill
+            </button>
+            <p class="text-center text-xs leading-5 text-gray-400">
+              Bill and payment records will be saved when the bill is completed.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>
+</div>
+
+
+<script>
+(function () {
+  function initBillForm() {
+    const body = document.getElementById("bill_items_body");
+    if (!body || body.dataset.initialized === "true") return;
+    body.dataset.initialized = "true";
+
+    const productSearch = document.getElementById("product_search");
+    const productTiles = Array.from(document.querySelectorAll(".product-tile"));
+    const noProductsFound = document.getElementById("no_products_found");
+
+    const customerSearch = document.getElementById("customer_search");
+    const customerResults = document.getElementById("customer_results");
+    const customerHiddenId = document.getElementById("bill_customer_id");
+    const selectedCustomerName = document.getElementById("selected_customer_name");
+    const customerNoResults = document.getElementById("customer_no_results");
+    const customerButtons = Array.from(document.querySelectorAll(".customer-result"));
+
+    // NEW CODE: Walk-in customer fields
+    const walkInDetails = document.getElementById("walk_in_details");
+
+    function toggleWalkInDetails() {
+      if (!walkInDetails) return;
+
+      const isWalkIn = !customerHiddenId.value;
+      walkInDetails.classList.toggle("hidden", !isWalkIn);
+    }
+
+    // NEW CODE: Set initial visibility
+    toggleWalkInDetails();
+
+    const manualForm = document.getElementById("manual_item_form");
+    const paymentMode = document.getElementById("payment_mode");
+    const paidInput = document.getElementById("paid_amount");
+    const paymentHelp = document.getElementById("payment_help");
+    const paymentMethod = document.getElementById("payment_method");
+
+    let nextItemId = 0;
+    let oldBalance = 0;
+
+    const money = value => "₹" + (Number(value) || 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    // CUSTOMER SEARCH
+    customerSearch.addEventListener("input", function () {
+      const term = this.value.trim().toLowerCase();
+      let count = 0;
+
+      customerButtons.forEach(button => {
+        const text = (button.dataset.name + " " + button.dataset.phone).toLowerCase();
+        const matches = term.length > 0 && text.includes(term);
+        button.classList.toggle("hidden", !matches);
+        if (matches) count++;
+      });
+
+      customerResults.classList.toggle("hidden", term.length === 0);
+      customerNoResults.classList.toggle("hidden", count > 0);
+    });
+
+    customerButtons.forEach(button => {
+      button.addEventListener("click", function () {
+        customerHiddenId.value = this.dataset.id;
+        selectedCustomerName.textContent =
+          this.dataset.name + (this.dataset.phone ? " · " + this.dataset.phone : "");
+
+        oldBalance = Math.max(0, Number(this.dataset.oldBalance) || 0);
+
+        customerSearch.value = "";
+        customerResults.classList.add("hidden");
+
+        // NEW CODE: Hide walk-in fields for saved customers
+        toggleWalkInDetails();
+
+        updateSummary();
+      });
+    });
+
+    document.getElementById("change_customer").addEventListener("click", function () {
+      customerHiddenId.value = "";
+      selectedCustomerName.textContent = "Walk-in Customer";
+      oldBalance = 0;
+
+      customerSearch.value = "";
+      customerResults.classList.add("hidden");
+
+      // NEW CODE: Show walk-in fields again
+      toggleWalkInDetails();
+
+      updateSummary();
+      customerSearch.focus();
+    });
+
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest("#customer_search") &&
+          !event.target.closest("#customer_results")) {
+        customerResults.classList.add("hidden");
+      }
+    });
+
+    // PRODUCT SEARCH
+    productSearch.addEventListener("input", function () {
+      const term = this.value.trim().toLowerCase();
+      let count = 0;
+
+      productTiles.forEach(tile => {
+        const text = (tile.dataset.name + " " + tile.dataset.sku).toLowerCase();
+        const matches = text.includes(term);
+        tile.classList.toggle("hidden", !matches);
+        if (matches) count++;
+      });
+
+      noProductsFound.classList.toggle("hidden", count > 0);
+    });
+
+    // PAYMENT MODE
+    function syncPayment(total) {
+      const mode = paymentMode.value;
+      const payableTotal = total + oldBalance;
+
+      paidInput.max = payableTotal.toFixed(2);
+
+      if (mode === "full") {
+        paidInput.value = payableTotal.toFixed(2);
+        paidInput.readOnly = true;
+        paidInput.classList.add("bg-gray-50");
+        paymentHelp.textContent =
+          "Purane udhaar aur naye bill ka poora total automatically fill hoga.";
+      } else if (mode === "partial") {
+        paidInput.readOnly = false;
+        paidInput.classList.remove("bg-gray-50");
+        paymentHelp.textContent =
+          "Purane udhaar aur naye bill ko milakar jitne paise mile hain, enter karo.";
+      } else {
+        paidInput.value = "0";
+        paidInput.readOnly = true;
+        paidInput.classList.add("bg-gray-50");
+        paymentHelp.textContent =
+          "Udhaar / Credit: abhi koi payment receive nahi hui.";
+      }
+
+      const entered = Math.max(0, Number(paidInput.value) || 0);
+      return Math.min(entered, payableTotal);
+    }
+
+    // BILL SUMMARY
+    function updateSummary() {
+      const rows = Array.from(body.querySelectorAll("tr[data-bill-item]"));
+      let subtotal = 0;
+
+      rows.forEach(row => {
+        const qty = Math.max(0, Number(row.querySelector(".item-qty").value) || 0);
+        const rate = Math.max(0, Number(row.querySelector(".item-price").value) || 0);
+        const lineTotal = qty * rate;
+        row.querySelector(".item-total").textContent = money(lineTotal);
+        subtotal += lineTotal;
+      });
+
+      const discountInput = document.getElementById("discount_amount");
+      const discount = Math.min(
+        subtotal,
+        Math.max(0, Number(discountInput.value) || 0)
+      );
+
+      const total = Math.max(0, subtotal - discount);
+      const overallTotal = oldBalance + total;
+      const paid = syncPayment(total);
+      const overallDue = Math.max(0, overallTotal - paid);
+
+      document.getElementById("subtotal_display").textContent = money(subtotal);
+      document.getElementById("discount_display").textContent = "− " + money(discount);
+      document.getElementById("old_balance_display").textContent = money(oldBalance);
+      document.getElementById("bill_total_display").textContent = money(total);
+      document.getElementById("grand_total_display").textContent = money(overallTotal);
+      document.getElementById("paid_display").textContent = money(paid);
+      document.getElementById("due_display").textContent = money(overallDue);
+
+      document.getElementById("item_count").textContent =
+        rows.length + (rows.length === 1 ? " item" : " items");
+
+      const emptyRow = document.getElementById("empty_items");
+      if (emptyRow) emptyRow.classList.toggle("hidden", rows.length > 0);
+
+      const status = document.getElementById("payment_status_display");
+
+      if (overallTotal > 0 && paid >= overallTotal) {
+        status.textContent = "Paid";
+        status.className = "font-semibold text-green-700";
+      } else if (paid > 0) {
+        status.textContent = "Partial";
+        status.className = "font-semibold text-amber-700";
+      } else {
+        status.textContent = overallTotal > 0 ? "Unpaid" : "—";
+        status.className = "font-semibold text-red-600";
+      }
+    }
+
+    // ADD ITEM ROW
+    function addRow(item) {
+      const existing = !item.manual && Array.from(
+        body.querySelectorAll("tr[data-bill-item]")
+      ).find(row => row.dataset.productId === String(item.productId));
+
+      if (existing) {
+        const qtyInput = existing.querySelector(".item-qty");
+        qtyInput.value = (Number(qtyInput.value) || 0) + 1;
+        updateSummary();
+        return;
+      }
+
+      const row = document.createElement("tr");
+      row.dataset.billItem = "true";
+      row.dataset.itemId = String(nextItemId++);
+      row.dataset.productId = item.productId || "";
+      row.dataset.sku = item.sku || "";
+      row.dataset.unit = item.unit || "pcs";
+      row.className = "hover:bg-gray-50";
+
+      row.innerHTML = `
+        <td class="px-4 py-4">
+          <div class="item-name font-medium text-gray-900"></div>
+          <div class="item-sku mt-1 text-xs text-gray-500"></div>
+          <div class="item-unit mt-1 text-xs text-gray-400"></div>
+        </td>
+        <td class="px-4 py-4 text-right">
+          <input type="number" min="0" step="0.01" aria-label="Rate"
+            class="item-price w-24 rounded-md border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-blue-500">
+        </td>
+        <td class="px-4 py-4 text-right">
+          <input type="number" min="0.001" step="0.001" aria-label="Quantity"
+            class="item-qty w-20 rounded-md border border-gray-300 px-2 py-2 text-right text-sm outline-none focus:border-blue-500">
+        </td>
+        <td class="item-total whitespace-nowrap px-4 py-4 text-right text-sm font-semibold text-gray-900">₹0.00</td>
+        <td class="px-4 py-4 text-right">
+          <button type="button" aria-label="Remove item"
+            class="remove-item rounded-md px-2 py-1 text-xl text-red-500 hover:bg-red-50">×</button>
+        </td>
+      `;
+
+      row.querySelector(".item-name").textContent = item.name;
+      row.querySelector(".item-sku").textContent = item.sku || (item.manual ? "Manual item" : "");
+      row.querySelector(".item-unit").textContent =
+        item.manual ? "Manual charge" : "Unit: " + (item.unit || "pcs");
+
+      row.querySelector(".item-price").value = Number(item.price) || 0;
+      row.querySelector(".item-qty").value = Number(item.qty) || 1;
+
+      row.querySelector(".item-price").addEventListener("input", updateSummary);
+      row.querySelector(".item-qty").addEventListener("input", updateSummary);
+
+      row.querySelector(".remove-item").addEventListener("click", function () {
+        row.remove();
+        updateSummary();
+      });
+
+      body.appendChild(row);
+      updateSummary();
+    }
+
+    // CLICK PRODUCT TILE
+    productTiles.forEach(tile => {
+      tile.addEventListener("click", function () {
+        addRow({
+          name: this.dataset.name,
+          sku: this.dataset.sku,
+          price: this.dataset.price,
+          unit: this.dataset.unit,
+          productId: this.dataset.id
+        });
+        productSearch.focus();
+      });
+    });
+
+    // MANUAL ITEM FORM
+    document.getElementById("toggle_manual").addEventListener("click", function () {
+      manualForm.classList.toggle("hidden");
+      manualForm.classList.toggle("grid");
+
+      if (!manualForm.classList.contains("hidden")) {
+        document.getElementById("manual_name").focus();
+      }
+    });
+
+    document.getElementById("add_manual_btn").addEventListener("click", function () {
+      const name = document.getElementById("manual_name").value.trim();
+      const priceText = document.getElementById("manual_price").value;
+      const qtyText = document.getElementById("manual_qty").value;
+      const price = Number(priceText);
+      const qty = Number(qtyText);
+
+      if (!name) {
+        alert("Please enter an item description.");
+        document.getElementById("manual_name").focus();
+        return;
+      }
+
+      if (priceText === "" || !Number.isFinite(price) || price < 0) {
+        alert("Please enter a valid rate.");
+        document.getElementById("manual_price").focus();
+        return;
+      }
+
+      if (qtyText === "" || !Number.isFinite(qty) || qty <= 0) {
+        alert("Please enter a valid quantity.");
+        document.getElementById("manual_qty").focus();
+        return;
+      }
+
+      addRow({ name: name, price: price, qty: qty, manual: true });
+
+      document.getElementById("manual_name").value = "";
+      document.getElementById("manual_price").value = "";
+      document.getElementById("manual_qty").value = "1";
+      document.getElementById("manual_name").focus();
+    });
+
+    // EVENTS
+    document.getElementById("discount_amount").addEventListener("input", updateSummary);
+    paymentMode.addEventListener("change", updateSummary);
+    paidInput.addEventListener("input", updateSummary);
+
+    // SAVE BILL TO DATABASE
+    function submitBill(action) {
+      const rows = Array.from(body.querySelectorAll("tr[data-bill-item]"));
+
+      if (action === "finalized" && rows.length === 0) {
+        alert("Please add at least one item before completing the bill.");
+        productSearch.focus();
+        return;
+      }
+
+      const items = rows.map(row => ({
+        product_id: row.dataset.productId || null,
+        name: row.querySelector(".item-name").textContent.trim(),
+        sku: row.dataset.sku || "",
+        unit: row.dataset.unit || "pcs",
+        quantity: Number(row.querySelector(".item-qty").value),
+        unit_price: Number(row.querySelector(".item-price").value)
+      }));
+
+      const totalText = document.getElementById("bill_total_display").textContent;
+      const total = Number(totalText.replace(/[₹,\s]/g, "")) || 0;
+      const received = Number(paidInput.value) || 0;
+      const payableTotal = total + oldBalance;
+
+      if (action === "finalized" && received < 0) {
+        alert("Amount received negative nahi ho sakta.");
+        paidInput.focus();
+        return;
+      }
+
+      if (action === "finalized" && received > payableTotal) {
+        alert("Amount received total payable se zyada nahi ho sakta.");
+        paidInput.focus();
+        return;
+      }
+
+      if (items.some(item =>
+        !Number.isFinite(item.quantity) ||
+        item.quantity <= 0 ||
+        !Number.isFinite(item.unit_price) ||
+        item.unit_price < 0
+      )) {
+        alert("Please check item quantities and rates.");
+        return;
+      }
+
+      // Naye bill mein sirf bill total tak payment allocate hogi.
+      const currentBillPaid = Math.min(received, total);
+
+      // Naye bill ke baad bachi payment purane udhaar mein jayegi.
+      const oldUdhaarPayment = Math.min(
+        Math.max(received - currentBillPaid, 0),
+        oldBalance
+      );
+
+      document.getElementById("bill_items_json").value = JSON.stringify(items);
+
+      document.getElementById("bill_discount_amount").value =
+        document.getElementById("discount_amount").value || "0";
+
+      document.getElementById("bill_payment_mode").value = paymentMode.value;
+      document.getElementById("bill_paid_amount").value = currentBillPaid.toFixed(2);
+      document.getElementById("bill_old_udhaar_payment").value = oldUdhaarPayment.toFixed(2);
+      document.getElementById("bill_payment_method").value = paymentMethod.value;
+      document.getElementById("bill_submission_action").value = action;
+
+      document.getElementById("bill_form").requestSubmit();
+    }
+
+    document.getElementById("save_draft_btn").addEventListener("click", function () {
+      submitBill("draft");
+    });
+
+    document.getElementById("complete_bill_btn").addEventListener("click", function () {
+      submitBill("finalized");
+    });
+
+    updateSummary();
+  }
+
+  document.addEventListener("DOMContentLoaded", initBillForm);
+  document.addEventListener("turbo:load", initBillForm);
+})();
+</script>

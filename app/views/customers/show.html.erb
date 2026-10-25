@@ -1,0 +1,233 @@
+<div class="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+   <%= link_to "← Customers", customers_path,
+        class: "rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50" %>
+        
+    <div class="flex flex-col items-end">
+      <h1 class="text-3xl font-bold text-gray-900 text-right">
+        <%= @customer.name %>
+      </h1>
+
+      <p class="mt-1 text-sm text-gray-500 text-right">
+        Customer Code: <%= @customer.customer_code %>
+        · Phone: <%= @customer.phone %>
+      </p>
+    </div>
+
+  </div>
+
+  <!-- Account Summary -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-gray-500">Total Udhaar</p>
+      <p class="mt-2 text-2xl font-bold text-red-600">
+        <%= number_to_currency(@total_udhaar, unit: "₹", precision: 2) %>
+      </p>
+    </div>
+
+    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-gray-500">Total Jama</p>
+      <p class="mt-2 text-2xl font-bold text-green-600">
+        <%= number_to_currency(@total_jama, unit: "₹", precision: 2) %>
+      </p>
+    </div>
+
+    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <p class="text-sm font-medium text-gray-500">Baaki Balance</p>
+      <p class="mt-2 text-2xl font-bold <%= @current_balance.to_d.positive? ? 'text-red-600' : 'text-green-600' %>">
+        <%= number_to_currency(@current_balance, unit: "₹", precision: 2) %>
+      </p>
+    </div>
+
+  </div>
+
+  <!-- Receive Payment -->
+  <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+    <h2 class="mb-4 text-xl font-semibold text-gray-900">
+      Customer se Payment Lo
+    </h2>
+
+    <%= form_with model: [@customer, CustomerPayment.new],
+        class: "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" do |f| %>
+
+      <div>
+        <%= f.label :amount, "Amount (₹)", class: "mb-1 block text-sm font-medium text-gray-700" %>
+        <%= f.number_field :amount, step: "0.01", min: "0.01", required: true,
+            class: "w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none" %>
+      </div>
+
+      <div>
+        <%= f.label :payment_method, "Payment Method", class: "mb-1 block text-sm font-medium text-gray-700" %>
+        <%= f.select :payment_method,
+            [["Cash", "Cash"], ["UPI", "UPI"], ["Bank Transfer", "Bank Transfer"], ["Other", "Other"]],
+            { include_blank: "Select method" },
+            class: "w-full rounded-lg border border-gray-300 bg-white px-3 py-2" %>
+      </div>
+
+      <div>
+        <%= f.label :notes, "Notes", class: "mb-1 block text-sm font-medium text-gray-700" %>
+        <%= f.text_field :notes, placeholder: "Optional",
+            class: "w-full rounded-lg border border-gray-300 px-3 py-2" %>
+      </div>
+
+      <div class="flex items-end">
+        <%= f.submit "Save Payment",
+            class: "w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700" %>
+      </div>
+
+    <% end %>
+  </div>
+
+  <!-- Ledger -->
+  <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+
+<div class="flex flex-col gap-4 border-b border-gray-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <h2 class="text-xl font-semibold text-gray-900">
+      Customer Bahi-Khata
+    </h2>
+  </div>
+
+  <%= link_to bills_customer_path(@customer),
+      class: "inline-flex w-fit items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" do %>
+    <icon name="file-text" size="16" />
+    All Customer Bills
+    <icon name="arrow-right" size="16" />
+  <% end %>
+</div>
+
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="whitespace-nowrap px-4 py-3 text-left font-semibold text-gray-600">Date</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-600">Particulars</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600">Udhaar (Dr.)</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600">Jama (Cr.)</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600">Balance</th>
+            <th class="whitespace-nowrap px-4 py-3 text-center font-semibold text-gray-600">
+              WhatsApp
+            </th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-gray-100">
+          <% if @ledger_entries.present? %>
+            <% @ledger_entries.each do |entry| %>
+              <tr class="hover:bg-gray-50">
+                <td class="whitespace-nowrap px-4 py-3 text-gray-600">
+                  <%= entry[:date]&.strftime("%d-%m-%Y") %>
+                </td>
+
+                <td class="min-w-52 px-4 py-3">
+                  <p class="font-medium text-gray-900">
+                    <% if entry[:particulars].to_s.start_with?("Bill ") %>
+                      <% bill_number = entry[:particulars].to_s.sub(/\ABill /, "") %>
+                      <% bill = @bills.find { |b| b.bill_number == bill_number } %>
+
+                      <% if bill.present? %>
+                        <%= link_to entry[:particulars],
+                            bill_path(bill),
+                            class: "text-blue-600 hover:text-blue-800 hover:underline" %>
+                      <% else %>
+                        <%= entry[:particulars] %>
+                      <% end %>
+                    <% else %>
+                      <%= entry[:particulars] %>
+                    <% end %>
+                  </p>
+
+                  <% if entry[:details].present? %>
+                    <p class="mt-1 text-xs text-gray-500">
+                      <%= entry[:details] %>
+                    </p>
+                  <% end %>
+                </td>
+
+                <td class="whitespace-nowrap px-4 py-3 text-right text-red-600">
+                  <%= entry[:debit].to_d.positive? ? number_to_currency(entry[:debit], unit: "₹", precision: 2) : "—" %>
+                </td>
+
+                <td class="whitespace-nowrap px-4 py-3 text-right text-green-600">
+                  <%= entry[:credit].to_d.positive? ? number_to_currency(entry[:credit], unit: "₹", precision: 2) : "—" %>
+                </td>
+
+                <td class="whitespace-nowrap px-4 py-3 text-right font-semibold text-gray-900">
+                  <%= number_to_currency(entry[:balance], unit: "₹", precision: 2) %>
+                </td>
+                
+                <td class="whitespace-nowrap px-4 py-3 text-center">
+                  <% if entry == @ledger_entries.first && @customer.phone.present? %>
+                    <%
+                      phone = @customer.phone.to_s.gsub(/\D/, "")
+                      phone = "91#{phone}" if phone.length == 10
+
+                      total_udhaar = @total_udhaar.to_d
+                      total_jama = @total_jama.to_d
+                      remaining_balance = @current_balance.to_d
+
+                      latest_payment = entry[:payment]
+                      latest_bill = nil
+
+                      if entry[:particulars].to_s.start_with?("Bill ")
+                        latest_bill = @bills.find do |bill|
+                          "Bill #{bill.bill_number}" == entry[:particulars]
+                        end
+                      end
+
+                      latest_amount = if latest_payment.present?
+                        latest_payment.amount.to_d
+                      elsif latest_bill.present?
+                        latest_bill.total_amount.to_d
+                      else
+                        0.to_d
+                      end
+
+                      latest_date = entry[:date]&.strftime("%d-%m-%Y")
+
+                      message = <<~MESSAGE
+                        Namaste #{@customer.name.to_s.titleize} ji,
+
+                        BALAJI TRADERS - Complete Account Summary
+
+                        Customer Code: #{@customer.customer_code}
+                        Date: #{latest_date}
+                        Latest Entry: #{entry[:particulars]}
+
+                        Latest entry amount: #{number_to_currency(latest_amount, unit: "₹", precision: 2)}
+                        Credit (Amount Due): #{number_to_currency(remaining_balance, unit: "₹", precision: 2)}
+
+                        Dhanyavaad!
+                        BALAJI TRADERS
+                        -- Lampuwa --
+                      MESSAGE
+                    %>
+
+                    <%= link_to "🟢 WhatsApp",
+                        "https://wa.me/#{phone}?text=#{ERB::Util.url_encode(message)}",
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                        class: "inline-flex items-center rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700" %>
+                  <% else %>
+                    <span class="text-gray-400">—</span>
+                  <% end %>
+                </td>
+
+              </tr>
+            <% end %>
+          <% else %>
+            <tr>
+              <td colspan="6" class="px-4 py-10 text-center text-gray-500">
+                Abhi is customer ka koi finalized bill ya payment record nahi hai.
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

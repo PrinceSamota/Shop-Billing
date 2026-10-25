@@ -1,0 +1,21 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  bill: one
+  product: one
+  product_name: MyString
+  sku: MyString
+  quantity: 9.99
+  unit: MyString
+  unit_price: 9.99
+  line_total: 9.99
+
+two:
+  bill: two
+  product: two
+  product_name: MyString
+  sku: MyString
+  quantity: 9.99
+  unit: MyString
+  unit_price: 9.99
+  line_total: 9.99
