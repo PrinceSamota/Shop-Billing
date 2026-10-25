@@ -1,0 +1,171 @@
+
+<div class="min-h-screen w-full bg-slate-50 p-3 sm:p-5 lg:p-8">
+  <div class="mx-auto w-full max-w-screen-2xl">
+
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          Products
+        </h1>
+        <p class="mt-1 text-sm text-slate-500">
+          Manage your inventory and product prices
+        </p>
+      </div>
+
+      <%= link_to new_product_path,
+          class: "inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 sm:w-auto" do %>
+        <span class="text-lg">+</span>
+        Add Product
+      <% end %>
+    </div>
+
+    <% if notice.present? %>
+      <div class="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <%= notice %>
+      </div>
+    <% end %>
+
+    <!-- Search and Filters -->
+    <div class="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <%= form_with url: products_path, method: :get, local: true,
+          class: "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4",
+          id: "product-search-form" do |f| %>
+
+        <div class="sm:col-span-4">
+          <%= f.text_field :search,
+              id:"product_search",
+              value: params[:search],
+              placeholder: "Search by name or SKU........",
+              autocomplete: "off",
+              oninput: "clearTimeout(this.searchTimer); this.searchTimer = setTimeout(()=>  this.form.requestSubmit(), 100)",
+              class: "w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" %>
+        </div>
+
+        <div class="flex flex-wrap gap-2 sm:col-span-2 xl:col-span-4">
+          <%= f.submit "Search",
+              class: "cursor-pointer rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700" %>
+
+          <% if params[:search].present?%>
+            <%= link_to "Clear Filters", products_path,
+                class: "rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" %>
+          <%end%>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Product Summary -->
+   <!-- <div class="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-sm font-medium text-slate-500">Total Products</p>
+        <p class="mt-2 text-3xl font-bold text-slate-900"><%= Product.count %></p>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-sm font-medium text-slate-500">Total Stock Units</p>
+        <p class="mt-2 text-3xl font-bold text-slate-900">
+          <%= number_with_precision(Product.sum(:stock_quantity), precision: 3, strip_insignificant_zeros: true) %>
+        </p>
+      </div>
+
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:col-span-2 xl:col-span-1">
+        <p class="text-sm font-medium text-slate-500">Low Stock Products</p>
+        <p class="mt-2 text-3xl font-bold text-amber-600">
+          <%= Product.where("stock_quantity > 0 AND stock_quantity <= ?", 10).count %>
+        </p>
+      </div>
+    </div> -->
+
+    <!-- Inventory Table -->
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex flex-col gap-4 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div>
+          <h2 class="font-semibold text-slate-900">Product Inventory</h2>
+          <p class="mt-1 text-sm text-slate-500">
+            <%= @products.count %> matching products
+          </p>
+        </div>
+
+        <div class="sm:text-right">
+          <p class="text-sm font-medium text-slate-500">Total Products</p>
+          <p class="mt-2 text-3xl font-bold text-slate-900">
+            <%= Product.count %>
+          </p>
+        </div>
+      </div>
+
+      <% if @products.any? %>
+        <div class="w-full overflow-x-auto">
+          <table class="w-full min-w-[760px] text-center text-sm">
+            <thead class="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+              <tr>
+                <th class="px-5 py-4 font-semibold">Product</th>
+                <th class="px-5 py-4 font-semibold">SKU</th>
+                <th class="px-5 py-4 font-semibold">Purchase</th>
+                <th class="px-5 py-4 font-semibold">Selling</th>
+                <th class="px-5 py-4 font-semibold">Unit</th>
+                <th class="px-5 py-4 font-semibold">Update</th>
+                <th class="px-5 py-4 text-right font-semibold">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+              <% @products.each do |product| %>
+                <tr class="transition hover:bg-slate-50">
+                  <td class="px-5 py-4 font-semibold text-slate-900"><%= product.name.to_s.titleize %></td>
+                  <td class="whitespace-nowrap px-5 py-4 font-mono text-xs text-slate-500"><%= product.sku %></td>
+                  <td class="whitespace-nowrap px-5 py-4 text-slate-600">
+                    ₹<%= number_with_precision(product.purchase_price, precision: 2) %>
+                  </td>
+                  <td class="whitespace-nowrap px-5 py-4 font-semibold text-slate-900">
+                    ₹<%= number_with_precision(product.selling_price, precision: 2) %>
+                  </td>
+                  <td class="whitespace-nowrap px-5 py-4 font-semibold text-slate-500">
+                    <%= product.unit%>
+                  </td>
+                   <td class="whitespace-nowrap px-5 py-4 font-semibold text-slate-500">
+                    <%= product.updated_at.strftime("%d-%m-%Y") %>
+                  </td>
+                  <td class="whitespace-nowrap px-5 py-4 ">
+                    <div class="flex justify-end gap-3">
+                      <%= link_to "Edit", edit_product_path(product),
+                          class: "font-medium text-slate-600 hover:text-slate-900" %>
+                      <%= button_to "Delete", product_path(product),
+                          method: :delete,
+                          form: { data: { turbo_confirm: "Delete #{product.name}?" } },
+                          class: "font-medium text-red-600 hover:text-red-800" %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="px-5 py-16 text-center">
+          <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-600">+</div>
+          <h3 class="mt-4 text-lg font-semibold text-slate-900">No products found</h3>
+          <p class="mt-2 text-sm text-slate-500">Try another search or clear your filters.</p>
+          <%= link_to "Clear Filters", products_path,
+              class: "mt-5 inline-flex rounded-xl border px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50" %>
+        </div>
+      <% end %>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function focusProductSearch(){
+    const searchBox = document.getElementById("product_search")
+
+    if (searchBox && new URLSearchParams(window.location.search).has("search")){
+      searchBox.focus();
+
+      const length = searchBox.value.length;
+      searchBox.setSelectionRange(length, length);
+    }
+  }
+
+  document.addEventListener("turbo:load", focusProductSearch);
+  document.addEventListener("DOMContentLoaded", focusProductSearch);
+</script>

@@ -1,0 +1,230 @@
+<%
+  bill_total = @bill.total_amount.to_d
+  bill_paid = @bill.paid_amount.to_d
+
+  previous_udhaar = 0.to_d
+  old_paid = 0.to_d
+
+  if @bill.customer.present?
+    customer = @bill.customer
+
+    previous_bills = customer.bills
+      .where.not(finalized_at: nil)
+      .where("created_at < ?", @bill.created_at)
+
+    previous_bill_total = previous_bills.sum(:total_amount).to_d
+    previous_bill_paid = previous_bills.sum(:paid_amount).to_d
+
+    previous_payments = customer.customer_payments
+      .where("received_at < ?", @bill.created_at)
+      .sum(:amount).to_d
+
+    previous_udhaar = [
+      previous_bill_total - previous_bill_paid - previous_payments,
+      0.to_d
+    ].max
+
+    old_paid = customer.customer_payments
+      .where(
+        "notes LIKE ?",
+        "%Previous udhaar payment for bill #{@bill.bill_number}%"
+      )
+      .sum(:amount).to_d
+  end
+
+  grand_total = previous_udhaar + bill_total
+  total_received = bill_paid + old_paid
+  remaining_udhaar = [grand_total - total_received, 0.to_d].max
+%>
+
+<div style="font-family: Arial, sans-serif; color: #222; max-width: 700px; margin: 0 auto;">
+
+  <!-- Shop Header -->
+  <div style="text-align: center; border-bottom: 2px dashed #999; padding: 15px 5px;">
+    <p style="font-size: 16px; font-weight: bold; margin: 0 0 8px;">
+      ॥ श्री गणेशाय नमः ॥
+    </p>
+
+    <h1 style="font-size: 27px; margin: 5px 0; font-weight: 900;">
+      BALAJI TRADERS
+    </h1>
+
+    <p style="margin: 4px 0;">Village - Lampuwa</p>
+    <p style="margin: 4px 0;">Owner: Dinesh Kumar</p>
+
+    <p style="margin: 8px 0 2px;">
+      Ph.: 9982341441 | 8619742417
+    </p>
+
+    <p style="margin: 4px 0;">
+      <strong>GSTIN:</strong> 08JKTPK8370KIZ2
+    </p>
+  </div>
+
+  <!-- Bill Information -->
+  <div style="padding: 15px 5px; border-bottom: 1px solid #ddd;">
+    <h2 style="font-size: 20px; margin: 0 0 12px;">BILL / CASH MEMO</h2>
+
+    <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse: collapse;">
+      <tr>
+        <td><strong>Bill Number:</strong></td>
+        <td align="right"><%= @bill.bill_number %></td>
+      </tr>
+
+      <tr>
+        <td><strong>Date:</strong></td>
+        <td align="right">
+          <%= @bill.created_at.strftime("%d-%m-%Y %I:%M %p") %>
+        </td>
+      </tr>
+
+      <tr>
+        <td><strong>Billed To:</strong></td>
+        <td align="right">
+          <%= @bill.customer&.name.to_s.titleize.presence || "Walk-in Customer" %>
+        </td>
+      </tr>
+
+      <% if @bill.customer&.phone.present? %>
+        <tr>
+          <td><strong>Mobile:</strong></td>
+          <td align="right"><%= @bill.customer.phone %></td>
+        </tr>
+      <% end %>
+
+      <% if @bill.customer&.customer_code.present? %>
+        <tr>
+          <td><strong>Customer ID:</strong></td>
+          <td align="right"><%= @bill.customer.customer_code %></td>
+        </tr>
+      <% end %>
+
+      <tr>
+        <td><strong>Payment Status:</strong></td>
+        <td align="right">
+          <%= @bill.payment_status.to_s.humanize.presence || "Pending" %>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Purchased Items -->
+  <div style="padding: 15px 0;">
+    <h3 style="font-size: 16px; margin: 0 0 10px;">ITEMS PURCHASED</h3>
+
+    <table width="100%" cellpadding="7" cellspacing="0"
+           style="border-collapse: collapse; font-size: 13px; border: 1px solid #ddd;">
+      <thead>
+        <tr style="background-color: #f3f4f6;">
+          <th align="left" style="border: 1px solid #ddd;">Item</th>
+          <th align="right" style="border: 1px solid #ddd;">Qty</th>
+          <th align="right" style="border: 1px solid #ddd;">Rate</th>
+          <th align="right" style="border: 1px solid #ddd;">Amount</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <% @bill.bill_items.each do |item| %>
+          <tr>
+            <td style="border: 1px solid #ddd;">
+              <strong><%= item.product_name %></strong>
+              <% if item.sku.present? %>
+                <br>
+                <small><%= item.sku %></small>
+              <% end %>
+            </td>
+
+            <td align="right" style="border: 1px solid #ddd; white-space: nowrap;">
+              <%= number_with_precision(item.quantity, strip_insignificant_zeros: true) %>
+              <%= item.unit %>
+            </td>
+
+            <td align="right" style="border: 1px solid #ddd; white-space: nowrap;">
+              ₹<%= number_with_precision(item.unit_price, precision: 2) %>
+            </td>
+
+            <td align="right" style="border: 1px solid #ddd; white-space: nowrap;">
+              ₹<%= number_with_precision(item.line_total, precision: 2) %>
+            </td>
+          </tr>
+        <% end %>
+
+        <% if @bill.bill_items.empty? %>
+          <tr>
+            <td colspan="4" align="center" style="border: 1px solid #ddd;">
+              No items added to this bill.
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Payment Summary -->
+  <div style="border-top: 2px dashed #999; padding: 15px 5px;">
+    <h3 style="font-size: 17px; margin: 0 0 10px;">PAYMENT SUMMARY</h3>
+
+    <table width="100%" cellpadding="7" cellspacing="0"
+           style="border-collapse: collapse;">
+      <tr>
+        <td>Current Bill Total</td>
+        <td align="right">
+          ₹<%= number_with_precision(bill_total, precision: 2) %>
+        </td>
+      </tr>
+
+      <% if @bill.customer.present? %>
+        <tr>
+          <td>Previous Udhaar</td>
+          <td align="right">
+            ₹<%= number_with_precision(previous_udhaar, precision: 2) %>
+          </td>
+        </tr>
+      <% end %>
+
+      <tr style="background-color: #f3f4f6; font-weight: bold;">
+        <td>Grand Total</td>
+        <td align="right">
+          ₹<%= number_with_precision(grand_total, precision: 2) %>
+        </td>
+      </tr>
+
+      <tr>
+        <td>New Bill Payment</td>
+        <td align="right">
+          ₹<%= number_with_precision(bill_paid, precision: 2) %>
+        </td>
+      </tr>
+
+      <% if @bill.customer.present? %>
+        <tr>
+          <td>Old Udhaar Payment</td>
+          <td align="right">
+            ₹<%= number_with_precision(old_paid, precision: 2) %>
+          </td>
+        </tr>
+      <% end %>
+
+      <tr>
+        <td><strong>Total Amount Received</strong></td>
+        <td align="right" style="color: #15803d;">
+          <strong>₹<%= number_with_precision(total_received, precision: 2) %></strong>
+        </td>
+      </tr>
+
+      <tr style="background-color: #fffbeb; font-size: 16px;">
+        <td><strong>Remaining Udhaar</strong></td>
+        <td align="right" style="color: #92400e;">
+          <strong>₹<%= number_with_precision(remaining_udhaar, precision: 2) %></strong>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align: center; border-top: 1px solid #ddd; padding: 18px 5px;">
+    <p style="font-weight: bold; margin: 0;">Thank you! Visit Again.</p>
+    <p style="font-weight: bold; margin-top: 12px;">BALAJI TRADERS</p>
+  </div>
+
+</div>

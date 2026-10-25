@@ -1,0 +1,804 @@
+<div class="min-h-screen bg-gray-100 py-6 px-3 sm:px-6">
+  <div class="mx-auto">
+
+    <!-- Screen actions -->
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Bill Details</h1>
+        <p class="mt-1 text-sm text-gray-500">View, print and share your customer bill.</p>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <%= link_to "← Bills", bills_path,
+          class: "rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50" %>
+
+        <button type="button" id="print_bill_btn"
+          class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer">
+          🖨 Print Bill
+        </button>
+
+     <%# Email button: email address present hone par hi dikhega %>
+      <% if @bill.customer&.email.present? %>
+        <%= button_to send_bill_email_bill_path(@bill),
+              method: :post,
+              class: "rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 cursor-pointer" do %>
+          ✉ Send Email
+        <% end %>
+      <% end %>
+
+      <%# WhatsApp button: finalized bill aur mobile number hone par hi dikhega %>
+      <% if @bill.finalized_at.present? && @bill.customer&.phone.present? %>
+        <%
+          phone = @bill.customer.phone.to_s.gsub(/\D/, "")
+          phone = "91#{phone}" if phone.length == 10
+
+          previous_udhaar = @previous_udhaar.to_d
+          bill_total = @bill.total_amount.to_d
+          bill_paid = @bill.paid_amount.to_d
+          old_paid = @old_udhaar_payment.to_d
+
+          grand_total = previous_udhaar + bill_total
+          total_received = bill_paid + old_paid
+          remaining_udhaar = [grand_total - total_received, 0.to_d].max
+
+          message = <<~MESSAGE
+            Namaste #{@bill.customer.name.to_s.titleize},
+
+            BALAJI TRADERS - Bill & Payment Summary
+
+            Bill No: #{@bill.bill_number}
+            Date: #{@bill.created_at.strftime("%d-%m-%Y")}
+
+            Previous Outstanding Balance: #{number_to_currency(previous_udhaar, unit: "₹", precision: 2)}
+            New Bill Amount: #{number_to_currency(bill_total, unit: "₹", precision: 2)}
+            Total: #{number_to_currency(grand_total, unit: "₹", precision: 2)}
+
+            Amount Paid for New Bill: #{number_to_currency(bill_paid, unit: "₹", precision: 2)}
+            Amount Paid Toward Previous Balance: #{number_to_currency(old_paid, unit: "₹", precision: 2)}
+            Total Amount Paid: #{number_to_currency(total_received, unit: "₹", precision: 2)}
+
+            Remaining Outstanding Balance: #{number_to_currency(remaining_udhaar, unit: "₹", precision: 2)}
+
+            Dhanyavaad!
+            BALAJI TRADERS
+            -- Lampuwa --
+          MESSAGE
+        %>
+
+        <%= link_to "🟢 WhatsApp",
+            "https://wa.me/#{phone}?text=#{ERB::Util.url_encode(message)}",
+            target: "_blank",
+            rel: "noopener noreferrer",
+            class: "rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" %>
+      <% end %>
+      </div>
+    </div>
+
+    <!-- Receipt -->
+    <div id="bill_receipt" class="receipt-paper overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+
+      <!-- Shop header -->
+      <div class="receipt-header border-b border-dashed border-gray-300 px-3 py-4 text-center">
+        <p class="ganesh-mantra">॥ श्री गणेशाय नमः ॥</p>
+        <div class="relative">
+          <div class="text-center">
+            <h2 class="shop-name">BALAJI TRADERS</h2>
+            <p class="shop-address">Village - Lampuwa</p>
+            <p class="shop-owner">Owner: Dinesh Kumar</p>
+          </div>
+
+          <div class="absolute right-0 top-0 text-right">
+            <p class="text-xs font-semibold text-gray-700">Date</p>
+            <p class="text-xs text-gray-600 whitespace-nowrap">
+              <%= @bill.created_at.strftime("%d-%m-%Y") %>
+            </p>
+            <p class="text-xs text-gray-600 whitespace-nowrap">
+              <%= @bill.created_at.strftime("%I:%M %p") %>
+            </p>
+          </div>
+        </div>
+
+        <!-- Phone left, GSTIN right -->
+        <div class="shop-contact-row">
+          <div class="shop-phones">
+            <p>Ph.: 9982341441</p>
+            <p>Ph.: 8619742417</p>
+          </div>
+          <div class="shop-gstin">
+            <span>GSTIN</span>
+            <strong>08JKTPK8370KIZ2</strong>
+          </div>
+        </div>
+     <div class="receipt-divider"></div>
+      <!-- <div class="receipt-divider"></div>
+        <p class="receipt-title">BILL / CASH MEMO</p>
+        <p class="mt-2 text-sm text-gray-600">
+          Date: <%= @bill.created_at.strftime("%d-%m-%Y %I:%M %p") %>
+        </p>
+      </div> -->
+
+      <!-- Customer information -->
+     
+      <!-- Customer information -->
+      <div class="customer-section grid grid-cols-2 gap-2 border-b border-gray-200 px-3 py-3">
+        <div class="min-w-0 text-left">
+          <p class="section-label">Billed To</p>
+          <% customer_name = @bill.customer&.name.to_s.titleize.presence %>
+          <% walk_in_name = @bill.walk_in_name.to_s.titleize.presence %>
+
+          <p class="mt-1 break-words font-bold text-gray-900">
+            <%= customer_name || walk_in_name || "Walk-in Customer" %>
+          </p>
+          <% if @bill.customer&.phone.present? %>
+            <p class="mt-1 text-sm text-gray-600">
+              Mobile: <%= @bill.customer.phone %>
+            </p>
+          <% end %>
+
+          <% if @bill.customer&.customer_code.present? %>
+            <p class="mt-1 text-xs text-gray-500">
+              Customer ID: <%= @bill.customer.customer_code %>
+            </p>
+          <% end %>
+        </div>
+
+        <div class="min-w-0 text-right">
+          <p class="section-label">Payment Status</p>
+
+          <p class="mt-1 break-words font-bold <%= @bill.payment_status == 'paid' ? 'text-green-700' : 'text-amber-700' %>">
+            <%= @bill.payment_status.to_s.humanize.presence || "Pending" %>
+          </p>
+
+          <!-- <p class="mt-1 text-sm text-gray-600">
+            Bill ID: #<%= @bill.id %>
+          </p> -->
+
+          <p class="mt-1 text-xs text-gray-500">
+            Bill No: <%= @bill.bill_number %>
+          </p>
+        </div>
+      </div>
+
+      <!-- Previous Udhaar -->
+     <!-- <% if @bill.customer.present? %>
+        <div class="border-b border-gray-200 bg-amber-50 px-5 py-4 sm:px-8">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <p class="text-sm font-bold text-amber-900">Previous Udhaar</p>
+              <p class="mt-1 text-xs text-amber-800">Is bill se pehle ka pending balance</p>
+            </div>
+            <p class="text-lg font-extrabold text-amber-900">
+              <%= number_to_currency(@previous_udhaar || 0, unit: "₹", precision: 2, format: "%u%n") %>
+            </p>
+          </div>
+        </div>
+      <% end %> -->
+
+      <!-- Items -->
+      <div class="items-section px-3 py-5 sm:px-8">
+        <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-gray-700">
+          Items Purchased
+        </h3>
+
+        <div class="overflow-x-auto">
+          <table class="items-table w-full border-collapse text-left text-sm">
+            <thead>
+              <tr class="border-y border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
+                <th class="px-2 py-3 font-semibold">Item</th>
+                <th class="px-2 py-3 text-right font-semibold">Qty</th>
+                <th class="px-2 py-3 text-right font-semibold">Rate</th>
+                <th class="px-2 py-3 text-right font-semibold">Amount</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-gray-100">
+              <% @bill.bill_items.each do |item| %>
+                <tr>
+                  <td class="px-2 py-3">
+                    <p class="font-semibold text-gray-900"><%= item.product_name %></p>
+                    <% if item.sku.present? %>
+                      <p class="mt-1 text-xs text-gray-500"><%= item.sku %></p>
+                    <% end %>
+                  </td>
+
+                  <td class="px-2 py-3 text-right whitespace-nowrap text-gray-700">
+                    <%= number_with_precision(item.quantity, strip_insignificant_zeros: true) %>
+                    <%= item.unit %>
+                  </td>
+
+                  <td class="px-2 py-3 text-right whitespace-nowrap text-gray-700">
+                    <%= number_to_currency(item.unit_price, unit: "₹", precision: 2, format: "%u%n") %>
+                  </td>
+
+                  <td class="px-2 py-3 text-right whitespace-nowrap font-semibold text-gray-900">
+                    <%= number_to_currency(item.line_total, unit: "₹", precision: 2, format: "%u%n") %>
+                  </td>
+                </tr>
+              <% end %>
+
+              <% if @bill.bill_items.empty? %>
+                <tr>
+                  <td colspan="4" class="px-2 py-8 text-center text-gray-500">
+                    No items added to this bill.
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Totals: calculations unchanged -->
+      <div class="border-t border-dashed border-gray-300 px-5 py-5 sm:px-8">
+        <div class="ml-auto max-w-sm space-y-3">
+
+         <!--  <div class="flex justify-between gap-4 text-sm text-gray-600">
+            <span>Subtotal</span>
+            <span class="font-medium text-gray-900">
+              <%= number_to_currency(@bill.subtotal || 0, unit: "₹", precision: 2, format: "%u%n") %>
+            </span>
+          </div> -->
+
+        <!--   <div class="flex justify-between gap-4 text-sm text-gray-600">
+            <span>Discount</span>
+            <span class="font-medium text-gray-900">
+              − <%= number_to_currency(@bill.discount_amount || 0, unit: "₹", precision: 2, format: "%u%n") %>
+            </span>
+          </div> -->
+
+       <!--    <div class="flex justify-between gap-4 text-sm text-gray-600">
+            <span>Tax</span>
+            <span class="font-medium text-gray-900">
+              <%= number_to_currency(@bill.tax_amount || 0, unit: "₹", precision: 2, format: "%u%n") %>
+            </span>
+          </div> -->
+
+          <div class="flex justify-between gap-4 border-gray-200 pt-1 text-lg font-extrabold text-gray-900">
+            <span>Total</span>
+            <span>
+              <%= number_to_currency(@bill.total_amount || 0, unit: "₹", precision: 2, format: "%u%n") %>
+            </span>
+          </div>
+
+          <% if @bill.customer.present? %>
+            <div class="flex justify-between gap-4 text-sm text-gray-600">
+              <span>Previous Udhaar</span>
+              <span class="font-semibold text-amber-700">
+                <%= number_to_currency(@previous_udhaar || 0, unit: "₹", precision: 2, format: "%u%n") %>
+              </span>
+            </div>
+          <% end %>
+
+          <%
+            previous_udhaar = (@previous_udhaar || 0).to_d
+            bill_total = (@bill.total_amount || 0).to_d
+            bill_paid = (@bill.paid_amount || 0).to_d
+            old_paid = (@old_udhaar_payment || 0).to_d
+
+            grand_total = previous_udhaar + bill_total
+            total_received = bill_paid + old_paid
+            remaining_udhaar = [grand_total - total_received, 0.to_d].max
+          %>
+
+          <div class="flex justify-between gap-4 border-t border-dashed border-gray-200 pt-3 text-sm">
+            <span class="font-bold text-gray-900">Grand Total</span>
+            <span class="font-extrabold text-gray-900">
+              <%= number_to_currency(grand_total, unit: "₹", precision: 2, format: "%u%n") %>
+            </span>
+          </div>
+
+          <div class="flex justify-between gap-4 text-sm text-gray-600">
+            <span>New Bill Payment</span>
+            <span class="font-semibold text-green-700">
+              <%= number_to_currency(bill_paid, unit: "₹", precision: 2, format: "%u%n") %>
+            </span>
+          </div>
+
+          <% if @bill.customer.present? %>
+            <div class="flex justify-between gap-4 text-sm text-gray-600">
+              <span>Old Udhaar Payment</span>
+              <span class="font-semibold text-green-700">
+                <%= number_to_currency(old_paid, unit: "₹", precision: 2, format: "%u%n") %>
+              </span>
+            </div>
+          <% end %>
+
+          <div class="flex justify-between gap-4 text-sm text-gray-600">
+            <span>Total Amount Received</span>
+            <span class="font-bold text-green-700">
+              <%= number_to_currency(total_received, unit: "₹", precision: 2, format: "%u%n") %>
+            </span>
+          </div>
+
+          <div class="flex justify-between gap-4 rounded-lg bg-amber-50 px-3 py-3 text-lg">
+            <span class="font-bold text-amber-900">Remaining Udhaar</span>
+            <span class="font-extrabold text-amber-900">
+              <%= number_to_currency(remaining_udhaar, unit: "₹", precision: 2, format: "%u%n") %>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="border-t border-gray-200 bg-gray-50 px-5 py-5 text-center sm:px-8">
+        <p class="font-semibold text-gray-800">Thank you! Visit Again.</p>
+        <p class="mt-1 text-xs text-gray-500">Please keep this bill for your records.</p>
+      </div>
+    </div>
+
+    <p class="mt-4 text-center text-xs text-gray-500 print:hidden">
+      Tip: Select your USB receipt printer in the print dialog.
+    </p>
+  </div>
+</div>
+
+<style>
+  .receipt-header {
+    color: #111827;
+    line-height: 1.3;
+  }
+
+  .ganesh-mantra {
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 5px;
+  }
+
+  .hanuman-symbol {
+    font-size: 20px;
+    margin: 3px 0;
+  }
+
+  .shop-name {
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.7px;
+    margin: 4px 0;
+  }
+
+  .shop-address,
+  .shop-owner {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .shop-contact-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 4px;
+    margin-top: 7px;
+    text-align: left;
+    font-size: 9px;
+    line-height: 1.5;
+  }
+
+  .shop-phones {
+    flex: 0 0 auto;
+    text-align: left;
+  }
+
+  .shop-gstin {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .shop-gstin span,
+  .shop-gstin strong {
+    display: block;
+  }
+
+  .shop-gstin strong {
+    font-size: 9px;
+    font-weight: 800;
+  }
+
+  .receipt-divider {
+    border-top: 1px dashed #777;
+    margin: 8px 0;
+  }
+
+  .receipt-title {
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .bill-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 8px;
+  }
+
+
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  html,
+  body {
+    width: 80mm !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #bill_receipt,
+  #bill_receipt * {
+    visibility: visible !important;
+  }
+
+  #bill_receipt {
+    position: static !important;
+    display: block !important;
+    width: 76mm !important;
+    min-width: 0 !important;
+    max-width: 76mm !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 9px !important;
+  }
+
+  /* Header: extra space kam */
+  #bill_receipt .receipt-header {
+    padding: 1mm 1mm 1mm !important;
+    margin: 0 !important;
+    line-height: 1.15 !important;
+  }
+
+  #bill_receipt .ganesh-mantra {
+    font-size: 10px !important;
+    margin: 0 0 2px !important;
+  }
+
+  #bill_receipt .hanuman-symbol {
+    font-size: 14px !important;
+    margin: 1px 0 !important;
+  }
+
+  #bill_receipt .shop-name {
+    text-align: center !important;
+    font-size: 16px !important;
+    letter-spacing: 0 !important;
+    white-space: nowrap !important;
+    margin: 1px 0 !important;
+  }
+
+  #bill_receipt .shop-address,
+  #bill_receipt .shop-owner {
+    font-size: 8px !important;
+    margin: 1px 0 !important;
+  }
+
+  #bill_receipt .shop-contact-row {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 1mm !important;
+    width: 100% !important;
+    margin-top: 3px !important;
+    font-size: 7px !important;
+    line-height: 1.2 !important;
+  }
+
+  #bill_receipt .shop-phones {
+    flex: 1 1 50% !important;
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  #bill_receipt .shop-gstin {
+    flex: 1 1 50% !important;
+    min-width: 0 !important;
+    text-align: right !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #bill_receipt .shop-gstin strong {
+    font-size: 7px !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #bill_receipt .receipt-divider {
+    margin: 3px 0 !important;
+  }
+
+  /* Customer details */
+  #bill_receipt .customer-section {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 2mm !important;
+    padding: 4px 2px !important;
+    margin: 0 !important;
+  }
+
+  #bill_receipt .customer-section > div + div {
+    margin-top: 0 !important;
+    text-align: right !important;
+  }
+
+  #bill_receipt .section-label {
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Items table */
+  #bill_receipt .items-section {
+    display: block !important;
+    padding: 3px 1px !important;
+    margin: 0 !important;
+  }
+
+  #bill_receipt h3 {
+    font-size: 9px !important;
+    margin: 0 0 3px !important;
+  }
+
+  #bill_receipt .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  #bill_receipt .items-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  #bill_receipt th,
+  #bill_receipt td {
+    padding: 2px 1px !important;
+    font-size: 7.5px !important;
+    line-height: 1.2 !important;
+    color: #000 !important;
+    overflow-wrap: anywhere !important;
+    vertical-align: top !important;
+  }
+
+  #bill_receipt th:first-child,
+  #bill_receipt td:first-child {
+    width: 37% !important;
+    text-align: left !important;
+  }
+
+  #bill_receipt th:nth-child(2),
+  #bill_receipt td:nth-child(2) {
+    width: 15% !important;
+  }
+
+  #bill_receipt th:nth-child(3),
+  #bill_receipt td:nth-child(3) {
+    width: 20% !important;
+  }
+
+  #bill_receipt th:nth-child(4),
+  #bill_receipt td:nth-child(4) {
+    width: 28% !important;
+  }
+
+  /* Totals */
+  #bill_receipt .border-t.border-dashed.border-gray-300 {
+    padding: 4px 2px !important;
+    margin: 0 !important;
+  }
+
+  #bill_receipt .max-w-sm {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  #bill_receipt .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 3px !important;
+  }
+
+  #bill_receipt .text-lg {
+    font-size: 10px !important;
+  }
+
+  #bill_receipt .text-sm {
+    font-size: 8px !important;
+  }
+
+  #bill_receipt .text-xs {
+    font-size: 7px !important;
+  }
+
+  #bill_receipt .px-5,
+  #bill_receipt .sm\:px-8 {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+  }
+
+  #bill_receipt .py-5 {
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+  }
+
+  #bill_receipt .py-4 {
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+  }
+
+  #bill_receipt .py-3 {
+    padding-top: 3px !important;
+    padding-bottom: 3px !important;
+  }
+
+  #bill_receipt .bg-gray-50,
+  #bill_receipt .bg-amber-50 {
+    background: #fff !important;
+  }
+
+  #bill_receipt .text-gray-500,
+  #bill_receipt .text-gray-600,
+  #bill_receipt .text-gray-700,
+  #bill_receipt .text-gray-800,
+  #bill_receipt .text-gray-900,
+  #bill_receipt .text-green-700,
+  #bill_receipt .text-amber-900,
+  #bill_receipt .text-amber-700 {
+    color: #000 !important;
+  }
+
+  /* Rows ko split hone se bachao.
+     Poore items section ko avoid nahi karna,
+     warna wo agle page par shift ho sakta hai. */
+  #bill_receipt tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  #bill_receipt .rounded-lg,
+  #bill_receipt .rounded-2xl,
+  #bill_receipt .rounded-full {
+    border-radius: 0 !important;
+  }
+
+  #bill_receipt .shadow-sm {
+    box-shadow: none !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+}
+@media print {
+  /* Browser aur application ke default gaps hatao */
+  @page {
+    size: 80mm auto;
+    margin: 0 !important;
+  }
+
+  html,
+  body {
+    width: 80mm !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  /* Layout sidebar aur main content ki padding hatao */
+  body > header,
+  body > aside,
+  #mobile-sidebar {
+    display: none !important;
+  }
+
+  main,
+  main > div {
+    display: block !important;
+    width: 80mm !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  /* Sirf receipt print ho */
+  body * {
+    visibility: hidden !important;
+  }
+
+  #bill_receipt,
+  #bill_receipt * {
+    visibility: visible !important;
+  }
+
+  #bill_receipt {
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    display: block !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    break-before: auto !important;
+    break-after: auto !important;
+    page-break-before: auto !important;
+    page-break-after: auto !important;
+  }
+
+  #bill_receipt .receipt-header,
+  #bill_receipt .customer-section,
+  #bill_receipt .items-section,
+  #bill_receipt .border-t.border-dashed.border-gray-300,
+  #bill_receipt > div:last-child {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Print ke time screen-only elements hide */
+  .print\:hidden {
+    display: none !important;
+  }
+}
+
+</style>
+
+<script>
+  (() => {
+    function initBillShow() {
+      const printButton = document.getElementById("print_bill_btn");
+      const smsButton = document.getElementById("send_bill_sms_btn");
+
+      if (printButton && !printButton.dataset.bound) {
+        printButton.dataset.bound = "true";
+
+        printButton.addEventListener("click", () => {
+          window.print();
+        });
+      }
+
+      if (smsButton && !smsButton.dataset.bound) {
+        smsButton.dataset.bound = "true";
+
+        smsButton.addEventListener("click", () => {
+          alert("SMS abhi configure nahi hua hai. Real SMS bhejne ke liye SMS provider aur Rails backend setup karna hoga.");
+        });
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", initBillShow);
+    document.addEventListener("turbo:load", initBillShow);
+  })();
+</script>

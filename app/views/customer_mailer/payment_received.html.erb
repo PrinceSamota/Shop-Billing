@@ -1,0 +1,56 @@
+<div style="margin:0;padding:24px 10px;background:#f3f4f6;font-family:Arial,sans-serif;color:#1f2937;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+
+    <div style="padding:24px 20px;text-align:center;border-bottom:3px solid #16a34a;">
+      <h1 style="margin:0;font-size:26px;color:#166534;">BALAJI TRADERS</h1>
+      <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">Village - Lampuwa</p>
+      <p style="margin:5px 0 0;font-size:12px;color:#6b7280;">Payment Receipt</p>
+    </div>
+
+    <div style="padding:24px 20px;">
+      <h2 style="margin:0 0 12px;font-size:20px;">
+        Namaste <%= @customer.name.to_s.titleize %> ji!
+      </h2>
+
+      <p style="font-size:14px;line-height:1.7;color:#4b5563;">
+        Aapki payment receive ho gayi hai. Aapke khate ka updated hisaab:
+      </p>
+
+      <table width="100%" cellpadding="0" cellspacing="0"
+             style="border-collapse:collapse;font-size:14px;">
+        <tr>
+          <td style="padding:13px 12px;border:1px solid #e5e7eb;">Payment se pehle udhaar</td>
+          <td align="right" style="padding:13px 12px;border:1px solid #e5e7eb;">
+            ₹<%= number_with_precision(@balance_before, precision: 2) %>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:13px 12px;border:1px solid #e5e7eb;">Abhi jama kiya</td>
+          <td align="right" style="padding:13px 12px;border:1px solid #e5e7eb;color:#15803d;font-weight:bold;">
+            ₹<%= number_with_precision(@payment.amount, precision: 2) %>
+          </td>
+        </tr>
+
+        <tr style="background:#f0fdf4;">
+          <td style="padding:16px 12px;border:1px solid #bbf7d0;font-weight:bold;color:#166534;">
+            Ab baaki udhaar
+          </td>
+          <td align="right" style="padding:16px 12px;border:1px solid #bbf7d0;font-size:18px;font-weight:bold;color:#166534;">
+            ₹<%= number_with_precision(@balance_after, precision: 2) %>
+          </td>
+        </tr>
+      </table>
+
+      <p style="margin:20px 0 0;font-size:14px;color:#4b5563;">
+        Dhanyavaad! Payment karne ke liye aapka shukriya.
+      </p>
+    </div>
+
+    <div style="padding:18px;text-align:center;background:#f9fafb;border-top:1px solid #e5e7eb;">
+      <p style="margin:0;font-size:13px;font-weight:bold;color:#166534;">BALAJI TRADERS</p>
+      <p style="margin:5px 0 0;font-size:12px;color:#6b7280;">Lampuwa</p>
+    </div>
+
+  </div>
+</div>

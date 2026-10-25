@@ -1,0 +1,171 @@
+
+<div class="min-h-screen bg-gray-50 p-4 sm:p-6">
+  <div class="mx-auto max-w-7xl">
+
+    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+          Customers
+        </h1>
+        <p class="mt-1 text-sm text-gray-500">
+          Manage your customers and their contact details.
+        </p>
+      </div>
+
+      <%= link_to new_customer_path,
+          class: "inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700" do %>
+        <span class="mr-2 text-lg">+</span> Add Customer
+      <% end %>
+    </div>
+
+    <% if notice.present? %>
+      <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <%= notice %>
+      </div>
+    <% end %>
+
+    <% if alert.present? %>
+      <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <%= alert %>
+      </div>
+    <% end %>
+
+    <div class="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <p class="text-sm font-medium text-gray-500">Total Customers</p>
+        <p class="mt-2 text-3xl font-bold text-gray-900">
+          <%= Customer.count %>
+        </p>
+      </div>
+
+      <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <p class="text-sm font-medium text-gray-500">Search Results</p>
+        <p class="mt-2 text-3xl font-bold text-blue-600">
+          <%= @customers.count %>
+        </p>
+      </div>
+
+      <div class="rounded-xl  p-5">
+          <div class="mb-4 flex flex-wrap justify-end gap-3">
+            <%= link_to export_customers_path(format: :csv, search: params[:search]),
+                class: "inline-flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-100" do %>
+              <icon name="file-spreadsheet" size="16" />
+              Export Excel
+            <% end %>
+
+          <!-- <%= link_to export_customers_path(format: :pdf, search: params[:search]),
+                class: "inline-flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100" do %>
+              <icon name="file-text" size="16" />
+              Download PDF
+            <% end %>-->
+          </div> 
+      </div>
+    </div>
+
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div class="border-b border-gray-200 p-4 sm:p-5">
+        <%= form_with url: customers_path, method: :get,
+            local: true, class: "flex flex-col gap-3 sm:flex-row" do |f| %>
+
+          <div class="relative flex-1">
+            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m16 16 4 4"></path>
+              </svg>
+            </span>
+
+
+        <%= f.text_field :search,
+            id: "customer_search",
+            value: params[:search],
+            placeholder: "Search by name, mobile or customer code...",
+            autocomplete: "off",
+            oninput: "clearTimeout(this.searchTimer); this.searchTimer = setTimeout(() => this.form.requestSubmit(), 100)",
+            class: "w-full rounded-lg border border-gray-300 py-3 pl-10 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" %>
+
+          </div>
+
+          <%= f.submit "Search",
+              class: "cursor-pointer rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50" %>
+
+          <% if params[:search].present? %>
+            <%= link_to "Clear", customers_path,
+                class: "cursor-pointer rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50" %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <% if @customers.any? %>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 text-center">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Customer</th>
+                <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Customer Code</th>
+                <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Mobile</th>
+                <th class="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-gray-100 bg-white">
+              <% @customers.each do |customer| %>
+                <tr class="transition hover:bg-gray-50">
+                  <td class="whitespace-nowrap px-5 py-4">
+                    <%= link_to customer.name.to_s.titleize,
+                        customer_path(customer),
+                        class: "font-semibold text-gray-900 hover:text-blue-600 hover:underline cursor-pointer" %>
+                    <div class="mt-1 max-w-xs truncate text-xs text-gray-500"><%= customer.address.presence || "No address added" %></div>
+                  </td>
+
+                  <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-600">
+                    <%= customer.customer_code.presence || "—" %>
+                  </td>
+
+                  <td class="whitespace-nowrap px-5 py-4 text-sm text-gray-700">
+                    <%= customer.phone.presence || "—" %>
+                  </td>
+
+                  <td class="whitespace-nowrap px-5 py-4 text-sm">
+                    <div class="flex items-center justify-center gap-3">
+                      <%= link_to "Edit", edit_customer_path(customer),
+                          class: "font-semibold text-gray-600 hover:text-gray-900" %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="px-6 py-14 text-center">
+          <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-2xl">👤</div>
+          <h3 class="mt-4 text-lg font-semibold text-gray-900">No customers found</h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Try another search or add a new customer.
+          </p>
+          <%= link_to "Add Customer", new_customer_path,
+              class: "mt-5 inline-flex rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700" %>
+        </div>
+      <% end %>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+  function focusCustomerSearch() {
+    const searchBox = document.getElementById("customer_search");
+
+    if (searchBox && new URLSearchParams(window.location.search).has("search")) {
+      searchBox.focus();
+
+      const length = searchBox.value.length;
+      searchBox.setSelectionRange(length, length);
+    }
+  }
+
+  document.addEventListener("turbo:load", focusCustomerSearch);
+  document.addEventListener("DOMContentLoaded", focusCustomerSearch);
+</script>

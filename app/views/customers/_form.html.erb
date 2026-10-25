@@ -1,0 +1,90 @@
+
+<div class="rounded-2xl border border-gray-200 bg-white shadow-sm ">
+
+  <div class="border-b border-gray-100 px-5 py-5 sm:px-7">
+    <h2 class="text-lg font-bold text-gray-900">Customer Information</h2>
+  </div>
+
+  <div class="p-5 sm:p-7">
+
+    <% if @customer.errors.any? %>
+      <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <p class="font-semibold">Please correct the following errors:</p>
+        <ul class="mt-2 list-inside list-disc">
+          <% @customer.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <%= form_with model: @customer, local: true, class: "space-y-6" do |f| %>
+
+      <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+
+        <div>
+          <%= f.label :name, class: "mb-2 block text-sm font-semibold text-gray-700" do %>
+            Customer Name <span class="text-red-500">*</span>
+          <% end %>
+
+          <%= f.text_field :name,
+              required: true,
+              autofocus: true,
+              placeholder: "e.g. Rahul Sharma",
+              class: "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50" %>
+        </div>
+
+        <div>
+          <%= f.label :phone, "Mobile Number", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+
+          <%= f.telephone_field :phone,
+              autocomplete: "tel",
+              placeholder: "Enter mobile number",
+              class: "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50" %>
+        </div>
+
+        <div>
+          <%= f.label :email, "Email Address", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+
+          <%= f.email_field :email,
+              autocomplete: "email",
+              placeholder: "e.g. customer@gmail.com",
+              class: "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50" %>
+        </div>
+
+
+        <div class="sm:col-span-2">
+          <%= f.label :address, "Full Address", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+
+          <%= f.text_area :address,
+              rows: 3,
+              placeholder: "House number, street, area, city, PIN code...",
+              class: "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50" %>
+        </div>
+
+        <div class="sm:col-span-2">
+          <%= f.label :notes, "Notes (Optional)", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+
+          <%= f.text_area :notes,
+              rows: 3,
+              placeholder: "Any additional information about this customer...",
+              class: "w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-50" %>
+        </div>
+
+      </div>
+
+      <div class="flex flex-col-reverse gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-xs text-gray-500">Please check the mobile number before saving.</p>
+
+        <div class="flex flex-col gap-3 sm:flex-row">
+          <%= link_to "Cancel", customers_path,
+              class: "rounded-xl border border-gray-300 px-5 py-3 text-center text-sm font-semibold text-gray-700 transition hover:bg-gray-50" %>
+
+          <%= f.submit(@customer.persisted? ? "Update Customer" : "Save Customer",
+              class: "cursor-pointer rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-100") %>
+        </div>
+      </div>
+
+    <% end %>
+  </div>
+</div>

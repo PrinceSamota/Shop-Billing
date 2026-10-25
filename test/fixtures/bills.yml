@@ -1,0 +1,25 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  customer: one
+  bill_number: MyString
+  status: MyString
+  subtotal: 9.99
+  discount_amount: 9.99
+  tax_amount: 9.99
+  total_amount: 9.99
+  paid_amount: 9.99
+  payment_status: MyString
+  finalized_at: 2026-10-18 12:13:12
+
+two:
+  customer: two
+  bill_number: MyString
+  status: MyString
+  subtotal: 9.99
+  discount_amount: 9.99
+  tax_amount: 9.99
+  total_amount: 9.99
+  paid_amount: 9.99
+  payment_status: MyString
+  finalized_at: 2026-10-18 12:13:12
