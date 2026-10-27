@@ -1,6 +1,8 @@
 class Product < ApplicationRecord
     before_validation :generate_sku, on: :create
-    validates :name, presence: true
+    validates :name,
+    presence: true,
+    uniqueness: { case_sensitive: false }
     validates :sku, presence: true, uniqueness: true
     validates :purchase_price, :selling_price,
               numericality: { greater_than_or_equal_to: 0 }
