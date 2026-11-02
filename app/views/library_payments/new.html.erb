@@ -1,0 +1,164 @@
+
+<div class="min-h-screen bg-slate-50 px-4 py-6 sm:px-6">
+  <div class="mx-auto max-w-4xl">
+
+    <div class="mb-6 flex items-center gap-3">
+      <%= link_to library_student_path(@library_student),
+          class: "flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-100" do %>
+        ←
+      <% end %>
+
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+          Receive Student Fee
+        </h1>
+        <p class="mt-1 text-sm text-slate-500">
+          Student ki fee payment record karein
+        </p>
+      </div>
+    </div>
+
+    <% if @library_payment.errors.any? %>
+      <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <p class="font-semibold">Payment save nahi ho paayi:</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <% @library_payment.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="grid gap-6 lg:grid-cols-5">
+
+      <div class="space-y-5 lg:col-span-2">
+
+        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="mb-4 flex items-center gap-3">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-xl font-bold text-blue-700">
+              <%= @library_student.name.to_s.first&.upcase || "S" %>
+            </div>
+
+            <div class="min-w-0">
+              <h2 class="truncate font-bold text-slate-900">
+                <%= @library_student.name %>
+              </h2>
+              <p class="text-sm text-slate-500">
+                <%= @library_student.phone.presence || "Phone number nahi hai" %>
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-3 border-t border-slate-100 pt-4">
+            <div class="flex justify-between gap-3 text-sm">
+              <span class="text-slate-500">Admission Date</span>
+              <span class="font-medium text-slate-800">
+                <%= @library_student.admission_date&.strftime("%d %b %Y") || "—" %>
+              </span>
+            </div>
+
+            <div class="flex justify-between gap-3 text-sm">
+              <span class="text-slate-500">Monthly Fee</span>
+              <span class="font-semibold text-slate-900">
+                <%= number_to_currency(@library_student.monthly_fee, unit: "₹", precision: 2, delimiter: ",", format: "%u%n") %>
+              </span>
+            </div>
+
+            <div class="flex justify-between gap-3 text-sm">
+              <span class="text-slate-500">Fee Valid Till</span>
+              <span class="font-semibold text-slate-800">
+                <%= @library_student.fee_valid_till&.strftime("%d %b %Y") || "Not calculated" %>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-blue-100 bg-blue-50 p-5">
+          <div class="text-sm font-medium text-blue-800">
+            Payment history
+          </div>
+          <div class="mt-1 text-2xl font-bold text-blue-950">
+            <%= number_to_currency(@library_student.library_payments.sum(:amount), unit: "₹", precision: 2, delimiter: ",", format: "%u%n") %>
+          </div>
+          <p class="mt-1 text-xs text-blue-700">
+            Ab tak record ki gayi total fee
+          </p>
+        </div>
+
+      </div>
+
+      <div class="lg:col-span-3">
+        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+
+          <div class="mb-6">
+            <h2 class="text-lg font-bold text-slate-900">
+              Payment Details
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">
+              Amount aur payment ki details bharein.
+            </p>
+          </div>
+
+          <%= form_with model: [@library_student, @library_payment],
+              class: "space-y-5" do |f| %>
+
+            <div>
+              <%= f.label :amount, "Fee Amount (₹)", class: "mb-2 block text-sm font-semibold text-slate-700" %>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-semibold text-slate-400">₹</span>
+                <%= f.number_field :amount,
+                    min: "0.01",
+                    step: "0.01",
+                    required: true,
+                    placeholder: "1000.00",
+                    class: "w-full rounded-2xl border border-slate-300 bg-white py-3.5 pl-10 pr-4 text-lg font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" %>
+              </div>
+              <p class="mt-2 text-xs text-slate-500">
+                Jitni fee asal mein receive hui hai, utni hi amount dalein.
+              </p>
+            </div>
+
+            <div>
+              <%= f.label :payment_date, "Payment Date", class: "mb-2 block text-sm font-semibold text-slate-700" %>
+              <%= f.date_field :payment_date,
+                  required: true,
+                  class: "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" %>
+            </div>
+
+            <div>
+              <%= f.label :payment_method, "Payment Method", class: "mb-2 block text-sm font-semibold text-slate-700" %>
+              <%= f.select :payment_method,
+                  [["Cash", "cash"], ["UPI", "upi"], ["Card", "card"], ["Other", "other"]],
+                  { include_blank: "Payment method select karein" },
+                  required: true,
+                  class: "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100" %>
+            </div>
+
+            <div>
+              <%= f.label :notes, "Notes (Optional)", class: "mb-2 block text-sm font-semibold text-slate-700" %>
+              <%= f.text_area :notes,
+                  rows: 3,
+                  placeholder: "Jaise: November month fee, receipt number...",
+                  class: "w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100" %>
+            </div>
+
+            <div class="rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+              <strong>Dhyan dein:</strong> Payment save karne se pehle amount aur date check kar lein. Is payment ko student ki fee history mein record kiya jayega.
+            </div>
+
+            <div class="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row">
+              <%= link_to "Cancel",
+                  library_student_path(@library_student),
+                  class: "inline-flex items-center justify-center rounded-2xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50" %>
+
+              <%= f.submit "✓  Receive Fee",
+                  class: "inline-flex flex-1 cursor-pointer items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200" %>
+            </div>
+
+          <% end %>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
