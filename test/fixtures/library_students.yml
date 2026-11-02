@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: MyString
+  phone: MyString
+  admission_date: 2026-11-01
+  monthly_fee: 9.99
+  status: MyString
+  left_date: 2026-11-01
+  notes: MyText
+
+two:
+  name: MyString
+  phone: MyString
+  admission_date: 2026-11-01
+  monthly_fee: 9.99
+  status: MyString
+  left_date: 2026-11-01
+  notes: MyText

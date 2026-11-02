@@ -25,7 +25,20 @@ Rails.application.routes.draw do
     end
 
   end
+  resources :library_students do
+    member do
+      patch :mark_left
+      patch :mark_active
+    end
+
+    resources :library_payments, only: [:new, :create]
+  end
+
+  get "library", to: "library_students#index", as: :library
   resources :bills do
     post :send_bill_email, on: :member
+  end
+  resources :suppliers do
+    resources :supplier_entries, only: [:create]
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_24_163024) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_01_131513) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -70,6 +70,30 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_163024) do
     t.string "email"
   end
 
+  create_table "library_payments", force: :cascade do |t|
+    t.bigint "library_student_id", null: false
+    t.decimal "amount"
+    t.date "payment_date"
+    t.string "payment_method"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["library_student_id"], name: "index_library_payments_on_library_student_id"
+  end
+
+  create_table "library_students", force: :cascade do |t|
+    t.string "name"
+    t.string "phone"
+    t.date "admission_date"
+    t.decimal "monthly_fee"
+    t.string "status"
+    t.date "left_date"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.date "fee_valid_till"
+  end
+
   create_table "products", force: :cascade do |t|
     t.string "name"
     t.string "sku"
@@ -82,8 +106,32 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_24_163024) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "supplier_entries", force: :cascade do |t|
+    t.bigint "supplier_id", null: false
+    t.string "entry_type", null: false
+    t.date "entry_date", null: false
+    t.decimal "amount", precision: 12, scale: 2, null: false
+    t.text "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["supplier_id", "entry_date"], name: "index_supplier_entries_on_supplier_id_and_entry_date"
+    t.index ["supplier_id"], name: "index_supplier_entries_on_supplier_id"
+  end
+
+  create_table "suppliers", force: :cascade do |t|
+    t.string "shop_name", null: false
+    t.string "dealer_name"
+    t.string "phone"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["shop_name"], name: "index_suppliers_on_shop_name"
+  end
+
   add_foreign_key "bill_items", "bills"
   add_foreign_key "bill_items", "products"
   add_foreign_key "bills", "customers"
   add_foreign_key "customer_payments", "customers"
+  add_foreign_key "library_payments", "library_students"
+  add_foreign_key "supplier_entries", "suppliers"
 end

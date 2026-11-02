@@ -1,0 +1,132 @@
+<% running_balance = 0 %>
+<% ledger_rows = @supplier.supplier_entries.order(:entry_date, :created_at, :id).map do |entry|
+     running_balance += entry.entry_type == "purchase" ? entry.amount : -entry.amount
+     [entry, running_balance]
+   end.reverse %>
+
+<div class="min-h-screen bg-gray-50 p-4 sm:p-6">
+  <div class="mx-auto max-w-7xl">
+
+    <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <%= link_to "← All Suppliers", suppliers_path, class: "text-sm font-semibold text-blue-600" %>
+        <h1 class="mt-3 text-2xl font-bold text-gray-900 sm:text-3xl"><%= @supplier.shop_name.to_s.titleize %></h1>
+        <p class="mt-1 text-sm text-gray-500">
+          <%= @supplier.dealer_name.to_s.titleize %>
+          <%= " · #{@supplier.phone}" if @supplier.phone.present? %>
+        </p>
+      </div>
+
+      <%= link_to "Edit Details", edit_supplier_path(@supplier),
+          class: "rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700" %>
+    </div>
+
+    <% if notice.present? %>
+      <div class="mb-4 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700"><%= notice %></div>
+    <% end %>
+    <% if alert.present? %>
+      <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"><%= alert %></div>
+    <% end %>
+
+    <div class="mb-6 grid gap-4 sm:grid-cols-3">
+      <div class="rounded-2xl border border-gray-200 bg-white p-5">
+        <p class="text-sm text-gray-500">Total Udhaar (Dr.)</p>
+        <p class="mt-2 text-2xl font-bold text-gray-900"><%= number_to_currency(@total_udhaar, unit: "₹", precision: 2, delimiter: ",") %></p>
+      </div>
+      <div class="rounded-2xl border border-gray-200 bg-white p-5">
+        <p class="text-sm text-gray-500">Total Jama (Cr.)</p>
+        <p class="mt-2 text-2xl font-bold text-green-700"><%= number_to_currency(@total_jama, unit: "₹", precision: 2, delimiter: ",") %></p>
+      </div>
+      <div class="rounded-2xl border border-red-100 bg-red-50 p-5">
+        <p class="text-sm text-red-600">Abhi Baaki Dena Hai</p>
+        <p class="mt-2 text-2xl font-bold text-red-700"><%= number_to_currency(@current_balance, unit: "₹", precision: 2, delimiter: ",") %></p>
+      </div>
+    </div>
+
+    <div class="mb-6 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+      <h2 class="text-lg font-bold text-gray-900">＋ Nayi Khata Entry</h2>
+      <p class="mb-5 mt-1 text-sm text-gray-500">Maal aaya ho ya supplier ko payment diya ho, yahan record karo.</p>
+
+      <%= form_with model: [@supplier, @supplier_entry], class: "grid gap-4 sm:grid-cols-2 lg:grid-cols-4" do |f| %>
+        <div>
+          <%= f.label :entry_type, "Entry Type", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+          <%= f.select :entry_type, [["Maal / Udhaar (Dr.)", "purchase"], ["Payment Diya (Cr.)", "payment"]],
+              {}, class: "w-full rounded-xl border border-gray-300 bg-white px-3 py-3" %>
+        </div>
+
+        <div>
+          <%= f.label :entry_date, "Date", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+          <%= f.date_field :entry_date, required: true,
+              class: "w-full rounded-xl border border-gray-300 px-3 py-3" %>
+        </div>
+
+        <div>
+          <%= f.label :amount, "Amount (₹)", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+          <%= f.number_field :amount, required: true, min: "0.01", step: "0.01", placeholder: "0.00",
+              class: "w-full rounded-xl border border-gray-300 px-3 py-3" %>
+        </div>
+
+        <div>
+          <%= f.label :note, "Particulars / Maal Details", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+          <%= f.text_field :note, placeholder: "Jaise: Sarso tel ke 2 pipe",
+              class: "w-full rounded-xl border border-gray-300 px-3 py-3" %>
+        </div>
+
+        <div class="sm:col-span-2 lg:col-span-4">
+          <%= f.submit "Save Khata Entry",
+              class: "w-full cursor-pointer rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 sm:w-auto" %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <div class="border-b border-gray-100 p-5">
+        <h2 class="text-lg font-bold text-gray-900">Bahi-Khata Ledger</h2>
+        <p class="mt-1 text-sm text-gray-500">Date-wise maal aur payment ka record</p>
+      </div>
+
+      <% if ledger_rows.any? %>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[750px] text-left text-sm">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+              <tr>
+                <th class="px-4 py-4">Date</th>
+                <th class="px-4 py-4">Particulars</th>
+                <th class="px-4 py-4 text-right">Udhaar (Dr.)</th>
+                <th class="px-4 py-4 text-right">Jama (Cr.)</th>
+                <th class="px-4 py-4 text-right">Balance</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <% ledger_rows.each do |entry, balance| %>
+                <tr class="hover:bg-gray-50">
+                  <td class="whitespace-nowrap px-4 py-4 text-gray-600"><%= entry.entry_date.strftime("%d-%m-%Y") %></td>
+                  <td class="px-4 py-4 font-medium text-gray-900"><%= entry.particulars %></td>
+                  <td class="px-4 py-4 text-right">
+                    <% if entry.entry_type == "purchase" %>
+                      <%= number_to_currency(entry.amount, unit: "₹", precision: 2, delimiter: ",") %>
+                    <% else %>—<% end %>
+                  </td>
+                  <td class="px-4 py-4 text-right text-green-700">
+                    <% if entry.entry_type == "payment" %>
+                      <%= number_to_currency(entry.amount, unit: "₹", precision: 2, delimiter: ",") %>
+                    <% else %>—<% end %>
+                  </td>
+                  <td class="px-4 py-4 text-right font-bold <%= balance.negative? ? 'text-green-700' : 'text-red-600' %>">
+                    <%= number_to_currency(balance, unit: "₹", precision: 2, delimiter: ",") %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="p-10 text-center">
+          <p class="font-semibold text-gray-800">Abhi koi entry nahi hai</p>
+          <p class="mt-1 text-sm text-gray-500">Upar form se pehli maal ya payment entry add karo.</p>
+        </div>
+      <% end %>
+    </div>
+
+  </div>
+</div>

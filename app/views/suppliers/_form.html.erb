@@ -1,0 +1,43 @@
+<%= form_with model: @supplier, class: "space-y-5" do |f| %>
+  <% if @supplier.errors.any? %>
+    <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      <p class="font-semibold">Details check karo:</p>
+      <ul class="mt-2 list-disc pl-5">
+        <% @supplier.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :shop_name, "Shop / Supplier Name *", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+    <%= f.text_field :shop_name, required: true, placeholder: "Jaise: Shree Ganesh Traders",
+        class: "w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" %>
+  </div>
+
+  <div>
+    <%= f.label :dealer_name, "Dealer / Contact Person", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+    <%= f.text_field :dealer_name, placeholder: "Dealer ka naam",
+        class: "w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500" %>
+  </div>
+
+  <div>
+    <%= f.label :phone, "Mobile Number", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+    <%= f.telephone_field :phone, placeholder: "Mobile number",
+        class: "w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500" %>
+  </div>
+
+  <div>
+    <%= f.label :notes, "Address / Notes", class: "mb-2 block text-sm font-semibold text-gray-700" %>
+    <%= f.text_area :notes, rows: 3, placeholder: "Address ya koi zaroori baat",
+        class: "w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500" %>
+  </div>
+
+  <div class="flex flex-wrap gap-3 border-t border-gray-100 pt-5">
+    <%= f.submit(@supplier.persisted? ? "Update Supplier" : "Save Supplier",
+        class: "cursor-pointer rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700") %>
+    <%= link_to "Cancel", suppliers_path,
+        class: "rounded-xl border border-gray-300 px-6 py-3 font-semibold text-gray-700 hover:bg-gray-50" %>
+  </div>
+<% end %>

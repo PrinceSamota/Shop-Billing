@@ -55,10 +55,10 @@
         <a href="/bills" class="block rounded-xl px-4 py-3 font-medium hover:bg-blue-50 hover:text-blue-700">New Bill</a>
         <a href="/products" class="block rounded-xl px-4 py-3 font-medium hover:bg-blue-50 hover:text-blue-700">Products & Stock</a>
         <a href="/customers" class="block rounded-xl px-4 py-3 font-medium hover:bg-blue-50 hover:text-blue-700">Customers</a>
-        <a href="/payments" class="block rounded-xl px-4 py-3 font-medium hover:bg-blue-50 hover:text-blue-700">Payments & Udhaar</a>
-        <a href="/reports" class="block rounded-xl px-4 py-3 font-medium hover:bg-blue-50 hover:text-blue-700">Daily / Monthly Reports</a>
-        <a href="/expenses" class="block rounded-xl px-4 py-3 font-medium hover:bg-blue-50 hover:text-blue-700">Expenses</a>
-        <a href="/settings" class="block rounded-xl px-4 py-3 font-medium hover:bg-blue-50 hover:text-blue-700">Settings</a>
+        <a href="/suppliers" class="block rounded-xl px-4 py-3 font-medium hover:bg-blue-50 hover:text-blue-700">Suppliers</a>
+                <%= link_to library_students_path, class: "block rounded-xl px-4 py-3 font-medium transition hover:bg-blue-50 hover:text-blue-700" do %>
+          Library Students
+        <% end %>
       </nav>
     </aside>
 
@@ -89,6 +89,13 @@
           👥 Customers
         </a>
 
+        <a href="/suppliers" class="block rounded-xl px-4 py-3 font-medium transition hover:bg-blue-50 hover:text-blue-700">
+          🏪 Suppliers
+        </a>
+
+        <%= link_to library_students_path, class: "block rounded-xl px-4 py-3 font-medium transition hover:bg-blue-50 hover:text-blue-700" do %>
+          📚 Library Students
+        <% end %>
       <!--  <a href="/payments" class="block rounded-xl px-4 py-3 font-medium transition hover:bg-blue-50 hover:text-blue-700">
           💰 Payments & Udhaar
         </a>
